@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-electron/
+release/
+
+# Electron builder artifacts
+*.blockmap
+
+# SQLite (if accidentally created in project root)
+*.db
+*.db-wal
+*.db-shm
+
+# IDE / Tool configs
+.claude/
+.vite/
+*.swp
+*.swo
