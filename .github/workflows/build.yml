@@ -1,0 +1,55 @@
+name: Build Windows Exe
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - both
+          - installer
+          - portable
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build & Package
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Installer
+        if: inputs.build_type == 'both' || inputs.build_type == 'installer'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartToDo-Setup
+          path: release/SmartToDo Setup *.exe
+          if-no-files-found: error
+
+      - name: Upload Portable
+        if: inputs.build_type == 'both' || inputs.build_type == 'portable'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartToDo-Portable
+          path: release/SmartToDo-Portable.exe
+          if-no-files-found: error

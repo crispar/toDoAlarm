@@ -14,4 +14,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
-});
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./tests/setup.ts'],
+    environmentMatchGlobs: [
+      ['tests/electron/**', 'node'],
+    ],
+    include: ['tests/**/*.test.{ts,tsx}'],
+  },
+} as any);

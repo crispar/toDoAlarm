@@ -8,7 +8,9 @@
     "dev": "tsc -p tsconfig.electron.json && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "tsc -p tsconfig.electron.json && vite build",
     "dist": "npm run build && electron-builder",
-    "start": "electron ."
+    "start": "electron .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "todo",
@@ -23,6 +25,8 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -31,10 +35,12 @@
     "concurrently": "^9.2.1",
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
+    "jsdom": "^29.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
+    "vitest": "^4.1.0",
     "wait-on": "^9.0.4"
   },
   "build": {
