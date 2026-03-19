@@ -51,8 +51,14 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "!**/*.{ts,tsx,map,md,cpp,hpp,c,h,gyp,gypi,sh,patch}",
+      "!**/deps/sqlite3/sqlite3.c",
+      "!**/src/**/*.{cpp,hpp}",
+      "!**/{test,tests,__tests__,docs,example,examples}/**"
     ],
+    "compression": "maximum",
+    "npmRebuild": true,
     "win": {
       "target": [
         {

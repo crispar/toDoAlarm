@@ -8,18 +8,24 @@ interface Props {
   onClose: () => void;
 }
 
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description);
-  const [deadline, setDeadline] = useState(todo.deadline ? todo.deadline.slice(0, 16) : '');
-  const [reminderTime, setReminderTime] = useState(todo.reminder_time ? todo.reminder_time.slice(0, 16) : '');
+  const [deadline, setDeadline] = useState(todo.deadline ? toLocalInput(todo.deadline) : '');
+  const [reminderTime, setReminderTime] = useState(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
   const [priority, setPriority] = useState<PriorityLevel>(todo.priority);
 
   useEffect(() => {
     setTitle(todo.title);
     setDescription(todo.description);
-    setDeadline(todo.deadline ? todo.deadline.slice(0, 16) : '');
-    setReminderTime(todo.reminder_time ? todo.reminder_time.slice(0, 16) : '');
+    setDeadline(todo.deadline ? toLocalInput(todo.deadline) : '');
+    setReminderTime(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
     setPriority(todo.priority);
   }, [todo]);
 
@@ -113,15 +119,15 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
             <div className="snooze-buttons">
               <button onClick={() => {
                 const t = new Date(Date.now() + 5 * 60000);
-                handleReminderChange(t.toISOString().slice(0, 16));
+                handleReminderChange(toLocalInput(t.toISOString()));
               }}>+5분</button>
               <button onClick={() => {
                 const t = new Date(Date.now() + 10 * 60000);
-                handleReminderChange(t.toISOString().slice(0, 16));
+                handleReminderChange(toLocalInput(t.toISOString()));
               }}>+10분</button>
               <button onClick={() => {
                 const t = new Date(Date.now() + 30 * 60000);
-                handleReminderChange(t.toISOString().slice(0, 16));
+                handleReminderChange(toLocalInput(t.toISOString()));
               }}>+30분</button>
             </div>
           )}
