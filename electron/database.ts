@@ -3,6 +3,14 @@ import path from 'path';
 import { app } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 
+export interface TodoLink {
+  id: string;
+  todo_id: string;
+  url: string;
+  alias: string;
+  created_at: string;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -47,6 +55,18 @@ export class Database {
         updated_at TEXT NOT NULL,
         sort_order INTEGER DEFAULT 0
       );
+    `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS todo_links (
+        id TEXT PRIMARY KEY,
+        todo_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        alias TEXT DEFAULT '',
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_links_todo_id ON todo_links(todo_id);
     `);
 
     // Migration: add daily columns if they don't exist (for existing DBs)
@@ -184,6 +204,42 @@ export class Database {
       WHERE is_daily = 1
       ORDER BY sort_order ASC, created_at ASC
     `).all() as Todo[];
+  }
+
+  // === LINKS ===
+
+  getLinks(todoId: string): TodoLink[] {
+    return this.db.prepare(
+      'SELECT * FROM todo_links WHERE todo_id = ? ORDER BY created_at ASC'
+    ).all(todoId) as TodoLink[];
+  }
+
+  addLink(todoId: string, url: string, alias: string): TodoLink {
+    const link: TodoLink = {
+      id: uuidv4(),
+      todo_id: todoId,
+      url,
+      alias: alias || '',
+      created_at: new Date().toISOString(),
+    };
+    this.db.prepare(
+      'INSERT INTO todo_links (id, todo_id, url, alias, created_at) VALUES (@id, @todo_id, @url, @alias, @created_at)'
+    ).run(link);
+    return link;
+  }
+
+  updateLink(id: string, updates: { url?: string; alias?: string }): TodoLink | undefined {
+    const existing = this.db.prepare('SELECT * FROM todo_links WHERE id = ?').get(id) as TodoLink | undefined;
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updates };
+    this.db.prepare('UPDATE todo_links SET url = ?, alias = ? WHERE id = ?')
+      .run(updated.url, updated.alias, id);
+    return updated;
+  }
+
+  deleteLink(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM todo_links WHERE id = ?').run(id);
+    return result.changes > 0;
   }
 
   close() {

@@ -48,6 +48,19 @@ const mockApi = {
   quickAdd: {
     close: vi.fn(),
   },
+  link: {
+    getAll: vi.fn().mockResolvedValue([]),
+    add: vi.fn().mockImplementation(async (todoId: string, url: string, alias: string) => ({
+      id: 'link-' + Date.now(),
+      todo_id: todoId,
+      url,
+      alias,
+      created_at: new Date().toISOString(),
+    })),
+    update: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue(true),
+    open: vi.fn().mockResolvedValue(undefined),
+  },
   reminder: {
     snooze: vi.fn(),
     complete: vi.fn(),

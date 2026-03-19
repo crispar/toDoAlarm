@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, Notification } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Tray, Menu, nativeImage, Notification, shell } from 'electron';
 import path from 'path';
 import { Database } from './database';
 import { ReminderService } from './reminder';
@@ -131,6 +131,13 @@ function setupIPC() {
   safeHandle('todo:update', (id: string, updates) => db.updateTodo(id, updates));
   safeHandle('todo:delete', (id: string) => db.deleteTodo(id));
   safeHandle('todo:search', (query: string) => db.searchTodos(query));
+
+  // Links
+  safeHandle('link:getAll', (todoId: string) => db.getLinks(todoId));
+  safeHandle('link:add', (todoId: string, url: string, alias: string) => db.addLink(todoId, url, alias));
+  safeHandle('link:update', (id: string, updates: { url?: string; alias?: string }) => db.updateLink(id, updates));
+  safeHandle('link:delete', (id: string) => db.deleteLink(id));
+  safeHandle('link:open', (url: string) => shell.openExternal(url));
 
   // Window controls
   ipcMain.on('window:minimize', () => mainWindow?.minimize());

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Todo, PriorityLevel } from '../types/todo';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Todo, TodoLink, PriorityLevel } from '../types/todo';
 
 interface Props {
   todo: Todo;
@@ -21,13 +21,27 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
   const [reminderTime, setReminderTime] = useState(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
   const [priority, setPriority] = useState<PriorityLevel>(todo.priority);
 
+  // Links state
+  const [links, setLinks] = useState<TodoLink[]>([]);
+  const [newUrl, setNewUrl] = useState('');
+  const [newAlias, setNewAlias] = useState('');
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [editUrl, setEditUrl] = useState('');
+  const [editAlias, setEditAlias] = useState('');
+
+  const loadLinks = useCallback(async () => {
+    const data = await window.api.link.getAll(todo.id);
+    setLinks(data);
+  }, [todo.id]);
+
   useEffect(() => {
     setTitle(todo.title);
     setDescription(todo.description);
     setDeadline(todo.deadline ? toLocalInput(todo.deadline) : '');
     setReminderTime(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
     setPriority(todo.priority);
-  }, [todo]);
+    loadLinks();
+  }, [todo, loadLinks]);
 
   const saveTitle = () => {
     if (title.trim() && title !== todo.title) {
@@ -60,6 +74,38 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
     if (confirm('이 할 일을 삭제하시겠습니까?')) {
       onDelete();
     }
+  };
+
+  // Link handlers
+  const handleAddLink = async () => {
+    const url = newUrl.trim();
+    if (!url) return;
+    await window.api.link.add(todo.id, url, newAlias.trim());
+    setNewUrl('');
+    setNewAlias('');
+    loadLinks();
+  };
+
+  const handleDeleteLink = async (id: string) => {
+    await window.api.link.delete(id);
+    loadLinks();
+  };
+
+  const handleOpenLink = (url: string) => {
+    window.api.link.open(url);
+  };
+
+  const startEditLink = (link: TodoLink) => {
+    setEditingLinkId(link.id);
+    setEditUrl(link.url);
+    setEditAlias(link.alias);
+  };
+
+  const handleSaveEditLink = async () => {
+    if (!editingLinkId || !editUrl.trim()) return;
+    await window.api.link.update(editingLinkId, { url: editUrl.trim(), alias: editAlias.trim() });
+    setEditingLinkId(null);
+    loadLinks();
   };
 
   return (
@@ -131,6 +177,71 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
               }}>+30분</button>
             </div>
           )}
+        </div>
+
+        <div className="detail-field">
+          <label>연관 링크</label>
+          <div className="links-section">
+            {links.map((link) => (
+              <div key={link.id} className="link-item">
+                {editingLinkId === link.id ? (
+                  <div className="link-edit-form">
+                    <input
+                      type="text"
+                      value={editUrl}
+                      onChange={(e) => setEditUrl(e.target.value)}
+                      placeholder="URL"
+                      className="link-input"
+                    />
+                    <input
+                      type="text"
+                      value={editAlias}
+                      onChange={(e) => setEditAlias(e.target.value)}
+                      placeholder="표시 이름 (선택)"
+                      className="link-input"
+                    />
+                    <div className="link-edit-actions">
+                      <button className="link-save-btn" onClick={handleSaveEditLink}>저장</button>
+                      <button className="link-cancel-btn" onClick={() => setEditingLinkId(null)}>취소</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <span
+                      className="link-text"
+                      onClick={() => handleOpenLink(link.url)}
+                      title={link.url}
+                    >
+                      {link.alias || link.url}
+                    </span>
+                    <div className="link-actions">
+                      <button className="link-edit-btn" onClick={() => startEditLink(link)} title="수정">✎</button>
+                      <button className="link-delete-btn" onClick={() => handleDeleteLink(link.id)} title="삭제">✕</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+            <div className="link-add-form">
+              <input
+                type="text"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                placeholder="https://..."
+                className="link-input"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
+              />
+              <input
+                type="text"
+                value={newAlias}
+                onChange={(e) => setNewAlias(e.target.value)}
+                placeholder="표시 이름 (선택)"
+                className="link-input link-alias-input"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
+              />
+              <button className="link-add-btn" onClick={handleAddLink} disabled={!newUrl.trim()}>추가</button>
+            </div>
+          </div>
         </div>
 
         <div className="detail-field">

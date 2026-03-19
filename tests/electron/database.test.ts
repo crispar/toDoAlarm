@@ -273,4 +273,67 @@ describe('Database', () => {
     expect(all.find(t => t.id === t1.id)!.status).toBe('pending');
     expect(all.find(t => t.id === t2.id)!.status).toBe('completed');
   });
+
+  // === LINKS ===
+
+  test('addLink creates a link for a todo', () => {
+    const todo = db.createTodo({ title: '링크 테스트' });
+    const link = db.addLink(todo.id, 'https://example.com', '예시');
+
+    expect(link.id).toBeDefined();
+    expect(link.todo_id).toBe(todo.id);
+    expect(link.url).toBe('https://example.com');
+    expect(link.alias).toBe('예시');
+  });
+
+  test('getLinks returns links for a todo', () => {
+    const todo = db.createTodo({ title: '링크 테스트' });
+    db.addLink(todo.id, 'https://a.com', 'A');
+    db.addLink(todo.id, 'https://b.com', 'B');
+
+    const links = db.getLinks(todo.id);
+    expect(links).toHaveLength(2);
+    expect(links[0].alias).toBe('A');
+    expect(links[1].alias).toBe('B');
+  });
+
+  test('getLinks returns empty array for todo with no links', () => {
+    const todo = db.createTodo({ title: '링크 없음' });
+    expect(db.getLinks(todo.id)).toHaveLength(0);
+  });
+
+  test('updateLink changes url and alias', () => {
+    const todo = db.createTodo({ title: '링크 수정' });
+    const link = db.addLink(todo.id, 'https://old.com', '이전');
+    const updated = db.updateLink(link.id, { url: 'https://new.com', alias: '새로운' });
+
+    expect(updated).toBeDefined();
+    expect(updated!.url).toBe('https://new.com');
+    expect(updated!.alias).toBe('새로운');
+  });
+
+  test('updateLink returns undefined for nonexistent id', () => {
+    expect(db.updateLink('no-id', { alias: 'x' })).toBeUndefined();
+  });
+
+  test('deleteLink removes a link', () => {
+    const todo = db.createTodo({ title: '링크 삭제' });
+    const link = db.addLink(todo.id, 'https://del.com', '');
+
+    expect(db.deleteLink(link.id)).toBe(true);
+    expect(db.getLinks(todo.id)).toHaveLength(0);
+  });
+
+  test('deleteLink returns false for nonexistent id', () => {
+    expect(db.deleteLink('no-id')).toBe(false);
+  });
+
+  test('deleting todo cascades to links', () => {
+    const todo = db.createTodo({ title: '카스케이드' });
+    db.addLink(todo.id, 'https://a.com', '');
+    db.addLink(todo.id, 'https://b.com', '');
+
+    db.deleteTodo(todo.id);
+    expect(db.getLinks(todo.id)).toHaveLength(0);
+  });
 });

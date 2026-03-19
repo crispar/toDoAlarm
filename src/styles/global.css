@@ -794,6 +794,164 @@ input, textarea, button {
   white-space: pre-line;
 }
 
+/* === Links Section === */
+.links-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.link-text {
+  flex: 1;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.link-text:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.link-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.link-item:hover .link-actions {
+  opacity: 1;
+}
+
+.link-edit-btn,
+.link-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.link-edit-btn:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.link-delete-btn:hover {
+  color: var(--danger);
+  background: var(--bg-hover);
+}
+
+.link-add-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.link-input {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  outline: none;
+  font-size: 13px;
+  transition: border-color 0.15s;
+}
+
+.link-input:focus {
+  border-color: var(--accent);
+}
+
+.link-input::placeholder {
+  color: var(--text-muted);
+}
+
+.link-alias-input {
+  max-width: 100px;
+}
+
+.link-add-btn {
+  padding: 6px 12px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.link-add-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.link-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.link-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.link-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.link-save-btn,
+.link-cancel-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.link-save-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.link-save-btn:hover {
+  background: var(--accent-hover);
+}
+
+.link-cancel-btn {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.link-cancel-btn:hover {
+  color: var(--text-primary);
+}
+
 /* === Scrollbar === */
 ::-webkit-scrollbar {
   width: 6px;
