@@ -44,7 +44,7 @@ export default function TodoList({ todos, selectedId, onSelect, onToggle, onCrea
     const input: Partial<Todo> = { title };
 
     if (filter === 'daily') {
-      (input as any).is_daily = 1;
+      input.is_daily = 1;
     } else if (filter === 'today') {
       const today = new Date();
       today.setHours(23, 59, 59, 999);

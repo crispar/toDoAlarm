@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTodos } from './hooks/useTodos';
 import TitleBar from './components/TitleBar';
 import Sidebar from './components/Sidebar';
@@ -45,30 +45,33 @@ function App() {
     return <QuickAdd onCreate={createTodo} />;
   }
 
-  const dailyTodos = allTodos.filter(t => t.is_daily === 1);
-  const dailyProgress = {
-    done: dailyTodos.filter(t => t.status === 'completed').length,
-    total: dailyTodos.length,
-  };
+  const { dailyProgress, counts } = useMemo(() => {
+    const dailyTodos = allTodos.filter(t => t.is_daily === 1);
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const week = new Date(now.getTime() + 7 * 86400000);
 
-  const counts = {
-    daily: dailyTodos.length,
-    all: allTodos.filter((t) => t.status !== 'completed' && !t.is_daily).length,
-    today: allTodos.filter((t) => {
-      if (t.is_daily || t.status === 'completed' || !t.deadline) return false;
-      const d = new Date(t.deadline);
-      const now = new Date();
-      return d.toDateString() === now.toDateString();
-    }).length,
-    upcoming: allTodos.filter((t) => {
-      if (t.is_daily || t.status === 'completed' || !t.deadline) return false;
-      const d = new Date(t.deadline);
-      const now = new Date();
-      const week = new Date(now.getTime() + 7 * 86400000);
-      return d >= now && d <= week;
-    }).length,
-    completed: allTodos.filter((t) => t.status === 'completed' && !t.is_daily).length,
-  };
+    return {
+      dailyProgress: {
+        done: dailyTodos.filter(t => t.status === 'completed').length,
+        total: dailyTodos.length,
+      },
+      counts: {
+        daily: dailyTodos.length,
+        all: allTodos.filter(t => t.status !== 'completed' && !t.is_daily).length,
+        today: allTodos.filter(t => {
+          if (t.is_daily || t.status === 'completed' || !t.deadline) return false;
+          return new Date(t.deadline).toDateString() === todayStr;
+        }).length,
+        upcoming: allTodos.filter(t => {
+          if (t.is_daily || t.status === 'completed' || !t.deadline) return false;
+          const d = new Date(t.deadline);
+          return d >= now && d <= week;
+        }).length,
+        completed: allTodos.filter(t => t.status === 'completed' && !t.is_daily).length,
+      },
+    };
+  }, [allTodos]);
 
   return (
     <div className="app">

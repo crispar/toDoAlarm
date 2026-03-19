@@ -110,14 +110,25 @@ function registerShortcuts() {
   });
 }
 
+function safeHandle(channel: string, handler: (...args: any[]) => any) {
+  ipcMain.handle(channel, async (_event, ...args) => {
+    try {
+      return await handler(...args);
+    } catch (err) {
+      console.error(`IPC ${channel} error:`, err);
+      throw err;
+    }
+  });
+}
+
 function setupIPC() {
   // ToDo CRUD
-  ipcMain.handle('todo:getAll', () => db.getAllTodos());
-  ipcMain.handle('todo:getById', (_, id: string) => db.getTodoById(id));
-  ipcMain.handle('todo:create', (_, todo) => db.createTodo(todo));
-  ipcMain.handle('todo:update', (_, id: string, updates) => db.updateTodo(id, updates));
-  ipcMain.handle('todo:delete', (_, id: string) => db.deleteTodo(id));
-  ipcMain.handle('todo:search', (_, query: string) => db.searchTodos(query));
+  safeHandle('todo:getAll', () => db.getAllTodos());
+  safeHandle('todo:getById', (id: string) => db.getTodoById(id));
+  safeHandle('todo:create', (todo) => db.createTodo(todo));
+  safeHandle('todo:update', (id: string, updates) => db.updateTodo(id, updates));
+  safeHandle('todo:delete', (id: string) => db.deleteTodo(id));
+  safeHandle('todo:search', (query: string) => db.searchTodos(query));
 
   // Window controls
   ipcMain.on('window:minimize', () => mainWindow?.minimize());
@@ -193,17 +204,22 @@ app.whenReady().then(() => {
   reminderService.start();
 
   // Schedule midnight daily reset
+  let midnightTimer: ReturnType<typeof setTimeout> | null = null;
   const scheduleNextReset = () => {
     const now = new Date();
     const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     const ms = midnight.getTime() - now.getTime();
-    setTimeout(() => {
+    midnightTimer = setTimeout(() => {
       db.resetDailyTodos();
       mainWindow?.webContents.send('todo:updated');
       scheduleNextReset();
     }, ms);
   };
   scheduleNextReset();
+
+  app.on('will-quit', () => {
+    if (midnightTimer) clearTimeout(midnightTimer);
+  });
 });
 
 app.on('window-all-closed', () => {

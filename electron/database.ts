@@ -22,8 +22,8 @@ export interface Todo {
 export class Database {
   private db: BetterSqlite3.Database;
 
-  constructor() {
-    const dbPath = path.join(app.getPath('userData'), 'smarttodo.db');
+  constructor(customDbPath?: string) {
+    const dbPath = customDbPath ?? path.join(app.getPath('userData'), 'smarttodo.db');
     this.db = new BetterSqlite3(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
@@ -146,11 +146,12 @@ export class Database {
   }
 
   searchTodos(query: string): Todo[] {
+    const trimmed = query.slice(0, 200);
     return this.db.prepare(`
       SELECT * FROM todos
       WHERE title LIKE ? OR description LIKE ?
       ORDER BY created_at DESC
-    `).all(`%${query}%`, `%${query}%`) as Todo[];
+    `).all(`%${trimmed}%`, `%${trimmed}%`) as Todo[];
   }
 
   getPendingReminders(): Todo[] {

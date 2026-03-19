@@ -28,12 +28,20 @@ export class ReminderService {
   }
 
   private check() {
-    const pending = this.db.getPendingReminders();
-    for (const todo of pending) {
-      if (!this.notifiedIds.has(todo.id)) {
-        this.notifiedIds.add(todo.id);
-        this.onReminder(todo);
+    try {
+      const pending = this.db.getPendingReminders();
+      for (const todo of pending) {
+        if (!this.notifiedIds.has(todo.id)) {
+          this.notifiedIds.add(todo.id);
+          try {
+            this.onReminder(todo);
+          } catch (err) {
+            console.error(`Reminder callback failed for todo ${todo.id}:`, err);
+          }
+        }
       }
+    } catch (err) {
+      console.error('Reminder check failed:', err);
     }
   }
 }

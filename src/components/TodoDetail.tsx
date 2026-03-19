@@ -131,7 +131,7 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
           <label>데일리 루프</label>
           <button
             className={`daily-toggle ${todo.is_daily ? 'active' : ''}`}
-            onClick={() => onUpdate({ is_daily: todo.is_daily ? 0 : 1 } as any)}
+            onClick={() => onUpdate({ is_daily: todo.is_daily ? 0 : 1 })}
           >
             {todo.is_daily ? '🔄 매일 반복 (활성)' : '매일 반복으로 설정'}
           </button>
