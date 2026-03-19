@@ -48,6 +48,7 @@ jobs:
           name: SmartToDo-Setup
           path: release/SmartToDo Setup *.exe
           if-no-files-found: error
+          retention-days: 3
 
       - name: Upload Portable
         if: inputs.build_type == 'both' || inputs.build_type == 'portable'
@@ -56,3 +57,4 @@ jobs:
           name: SmartToDo-Portable
           path: release/SmartToDo-Portable.exe
           if-no-files-found: error
+          retention-days: 3
