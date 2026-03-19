@@ -59,6 +59,12 @@
     ],
     "compression": "maximum",
     "npmRebuild": true,
+    "extraResources": [
+      {
+        "from": "public/tray-icon.png",
+        "to": "tray-icon.png"
+      }
+    ],
     "win": {
       "target": [
         {

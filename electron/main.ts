@@ -19,6 +19,7 @@ function createMainWindow() {
     minHeight: 600,
     frame: false,
     titleBarStyle: 'hidden',
+    icon: path.join(__dirname, '../public/icon.png'),
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -87,9 +88,10 @@ function createQuickAddWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABhSURBVFhH7c6xDQAgDAQxev9lKRiAgoKCH3kDWDr5k24zs/cfz+kAHehABzrQgQ50oAMd6EAHOtCBDnSgAx3oQAc60IEOdKADHehABzrQgQ50oAMd6EAHOtCBDvxfZi/TaRYhMjMJMAAAAABJRU5ErkJggg=='
-  );
+  const trayIconPath = isDev
+    ? path.join(__dirname, '../public/tray-icon.png')
+    : path.join(process.resourcesPath, 'tray-icon.png');
+  const icon = nativeImage.createFromPath(trayIconPath);
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
