@@ -51,6 +51,18 @@ const mockApi = {
   link: {
     open: vi.fn().mockResolvedValue(undefined),
   },
+  comment: {
+    getAll: vi.fn().mockResolvedValue([]),
+    add: vi.fn().mockImplementation(async (_todoId: string, content: string) => ({
+      id: 'comment-' + Date.now(),
+      todo_id: _todoId,
+      content,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })),
+    update: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue(true),
+  },
   reminder: {
     snooze: vi.fn(),
     complete: vi.fn(),

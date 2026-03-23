@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Todo, PriorityLevel } from '../types/todo';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Todo, TodoComment, PriorityLevel } from '../types/todo';
 
 interface Props {
   todo: Todo;
@@ -14,9 +14,23 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Parse memo text into segments: plain text, bare URLs, and [alias](url) links */
-function parseDescription(text: string): Array<{ type: 'text' | 'link'; value: string; url?: string }> {
-  // Match [alias](url) or bare URLs
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return '방금 전';
+  if (mins < 60) return `${mins}분 전`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}시간 전`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return '어제';
+  if (days < 7) return `${days}일 전`;
+  return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+}
+
+/** Parse text into segments: plain text, bare URLs, and [alias](url) links */
+function parseContent(text: string): Array<{ type: 'text' | 'link'; value: string; url?: string }> {
   const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>)\]]+)/g;
   const segments: Array<{ type: 'text' | 'link'; value: string; url?: string }> = [];
   let lastIndex = 0;
@@ -27,10 +41,8 @@ function parseDescription(text: string): Array<{ type: 'text' | 'link'; value: s
       segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
     }
     if (match[1] && match[2]) {
-      // [alias](url)
       segments.push({ type: 'link', value: match[1], url: match[2] });
     } else if (match[3]) {
-      // bare URL
       segments.push({ type: 'link', value: match[3], url: match[3] });
     }
     lastIndex = match.index + match[0].length;
@@ -43,8 +55,8 @@ function parseDescription(text: string): Array<{ type: 'text' | 'link'; value: s
   return segments;
 }
 
-function RenderedMemo({ text, onClick }: { text: string; onClick: () => void }) {
-  const segments = parseDescription(text);
+function RenderedContent({ text }: { text: string }) {
+  const segments = parseContent(text);
 
   const handleLinkClick = (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
@@ -52,23 +64,19 @@ function RenderedMemo({ text, onClick }: { text: string; onClick: () => void }) 
   };
 
   return (
-    <div className="memo-rendered" onClick={onClick}>
-      {segments.length === 0 ? (
-        <span className="memo-placeholder">메모를 입력하세요... (클릭하여 편집)</span>
-      ) : (
-        segments.map((seg, i) =>
-          seg.type === 'link' ? (
-            <span
-              key={i}
-              className="memo-link"
-              onClick={(e) => handleLinkClick(e, seg.url!)}
-              title={seg.url}
-            >
-              {seg.value}
-            </span>
-          ) : (
-            <span key={i}>{seg.value}</span>
-          )
+    <div className="comment-content">
+      {segments.map((seg, i) =>
+        seg.type === 'link' ? (
+          <span
+            key={i}
+            className="memo-link"
+            onClick={(e) => handleLinkClick(e, seg.url!)}
+            title={seg.url}
+          >
+            {seg.value}
+          </span>
+        ) : (
+          <span key={i}>{seg.value}</span>
         )
       )}
     </div>
@@ -77,32 +85,37 @@ function RenderedMemo({ text, onClick }: { text: string; onClick: () => void }) 
 
 export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(todo.title);
-  const [description, setDescription] = useState(todo.description);
   const [deadline, setDeadline] = useState(todo.deadline ? toLocalInput(todo.deadline) : '');
   const [reminderTime, setReminderTime] = useState(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
   const [priority, setPriority] = useState<PriorityLevel>(todo.priority);
-  const [editingMemo, setEditingMemo] = useState(false);
+
+  // Comments
+  const [comments, setComments] = useState<TodoComment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  const loadComments = useCallback(async () => {
+    const data = await window.api.comment.getAll(todo.id);
+    setComments(data);
+  }, [todo.id]);
 
   useEffect(() => {
     setTitle(todo.title);
-    setDescription(todo.description);
     setDeadline(todo.deadline ? toLocalInput(todo.deadline) : '');
     setReminderTime(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
     setPriority(todo.priority);
-    setEditingMemo(false);
-  }, [todo]);
+    setEditingId(null);
+    setMenuId(null);
+    loadComments();
+  }, [todo, loadComments]);
 
   const saveTitle = () => {
     if (title.trim() && title !== todo.title) {
       onUpdate({ title: title.trim() });
     }
-  };
-
-  const saveDescription = () => {
-    if (description !== todo.description) {
-      onUpdate({ description });
-    }
-    setEditingMemo(false);
   };
 
   const handleDeadlineChange = (val: string) => {
@@ -124,6 +137,35 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
     if (confirm('이 할 일을 삭제하시겠습니까?')) {
       onDelete();
     }
+  };
+
+  // Comment handlers
+  const handleAddComment = async () => {
+    const content = newComment.trim();
+    if (!content) return;
+    await window.api.comment.add(todo.id, content);
+    setNewComment('');
+    await loadComments();
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    await window.api.comment.delete(id);
+    setMenuId(null);
+    loadComments();
+  };
+
+  const startEdit = (c: TodoComment) => {
+    setEditingId(c.id);
+    setEditContent(c.content);
+    setMenuId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editContent.trim()) return;
+    await window.api.comment.update(editingId, editContent.trim());
+    setEditingId(null);
+    loadComments();
   };
 
   return (
@@ -207,24 +249,83 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
           </button>
         </div>
 
-        <div className="detail-field">
-          <label>메모 <span className="memo-hint">[이름](URL) 형식으로 링크 추가</span></label>
-          {editingMemo ? (
+        {/* Comments Section */}
+        <div className="detail-field comments-field">
+          <label>
+            댓글
+            {comments.length > 0 && <span className="comment-count">{comments.length}</span>}
+          </label>
+
+          <div className="comments-list">
+            {comments.map((c) => (
+              <div key={c.id} className="comment-item">
+                {editingId === c.id ? (
+                  <div className="comment-edit">
+                    <textarea
+                      autoFocus
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.ctrlKey) handleSaveEdit();
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                      className="comment-edit-input"
+                      rows={3}
+                    />
+                    <div className="comment-edit-actions">
+                      <button className="comment-save-btn" onClick={handleSaveEdit}>저장</button>
+                      <button className="comment-cancel-btn" onClick={() => setEditingId(null)}>취소</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <RenderedContent text={c.content} />
+                    <div className="comment-meta">
+                      <span title={new Date(c.created_at).toLocaleString('ko-KR')}>
+                        {formatTime(c.created_at)}
+                        {c.updated_at !== c.created_at && ' (수정됨)'}
+                      </span>
+                      <div className="comment-menu-wrapper">
+                        <button
+                          className="comment-menu-btn"
+                          onClick={(e) => { e.stopPropagation(); setMenuId(menuId === c.id ? null : c.id); }}
+                        >
+                          ···
+                        </button>
+                        {menuId === c.id && (
+                          <div className="comment-menu">
+                            <button onClick={() => startEdit(c)}>수정</button>
+                            <button className="danger" onClick={() => handleDeleteComment(c.id)}>삭제</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+            <div ref={commentsEndRef} />
+          </div>
+
+          <div className="comment-add">
             <textarea
-              autoFocus
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={saveDescription}
-              className="detail-textarea"
-              placeholder={"메모를 입력하세요...\n\n링크 예시:\nhttps://google.com\n[구글](https://google.com)"}
-              rows={6}
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey) handleAddComment();
+              }}
+              placeholder={"댓글 작성... (Ctrl+Enter로 저장)\n[이름](URL) 형식으로 링크 추가"}
+              className="comment-add-input"
+              rows={2}
             />
-          ) : (
-            <RenderedMemo
-              text={description}
-              onClick={() => setEditingMemo(true)}
-            />
-          )}
+            <button
+              className="comment-add-btn"
+              onClick={handleAddComment}
+              disabled={!newComment.trim()}
+            >
+              등록
+            </button>
+          </div>
         </div>
 
         <div className="detail-info">

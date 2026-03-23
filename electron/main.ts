@@ -139,6 +139,12 @@ function setupIPC() {
   safeHandle('link:delete', (id: string) => db.deleteLink(id));
   safeHandle('link:open', (url: string) => shell.openExternal(url));
 
+  // Comments
+  safeHandle('comment:getAll', (todoId: string) => db.getComments(todoId));
+  safeHandle('comment:add', (todoId: string, content: string) => db.addComment(todoId, content));
+  safeHandle('comment:update', (id: string, content: string) => db.updateComment(id, content));
+  safeHandle('comment:delete', (id: string) => db.deleteComment(id));
+
   // Window controls
   ipcMain.on('window:minimize', () => mainWindow?.minimize());
   ipcMain.on('window:maximize', () => {

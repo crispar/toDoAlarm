@@ -11,6 +11,14 @@ export interface TodoLink {
   created_at: string;
 }
 
+export interface TodoComment {
+  id: string;
+  todo_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -68,6 +76,21 @@ export class Database {
       );
       CREATE INDEX IF NOT EXISTS idx_links_todo_id ON todo_links(todo_id);
     `);
+
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS todo_comments (
+        id TEXT PRIMARY KEY,
+        todo_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_comments_todo_id ON todo_comments(todo_id);
+    `);
+
+    // Migrate existing descriptions to comments
+    this.migrateDescriptionsToComments();
 
     // Migration: add daily columns if they don't exist (for existing DBs)
     try {
@@ -167,11 +190,13 @@ export class Database {
 
   searchTodos(query: string): Todo[] {
     const trimmed = query.slice(0, 200);
+    const pattern = `%${trimmed}%`;
     return this.db.prepare(`
       SELECT * FROM todos
       WHERE title LIKE ? OR description LIKE ?
+        OR id IN (SELECT todo_id FROM todo_comments WHERE content LIKE ?)
       ORDER BY created_at DESC
-    `).all(`%${trimmed}%`, `%${trimmed}%`) as Todo[];
+    `).all(pattern, pattern, pattern) as Todo[];
   }
 
   getPendingReminders(): Todo[] {
@@ -204,6 +229,67 @@ export class Database {
       WHERE is_daily = 1
       ORDER BY sort_order ASC, created_at ASC
     `).all() as Todo[];
+  }
+
+  // === COMMENTS ===
+
+  getComments(todoId: string): TodoComment[] {
+    return this.db.prepare(
+      'SELECT * FROM todo_comments WHERE todo_id = ? ORDER BY created_at ASC'
+    ).all(todoId) as TodoComment[];
+  }
+
+  addComment(todoId: string, content: string): TodoComment {
+    const now = new Date().toISOString();
+    const comment: TodoComment = {
+      id: uuidv4(),
+      todo_id: todoId,
+      content,
+      created_at: now,
+      updated_at: now,
+    };
+    this.db.prepare(
+      'INSERT INTO todo_comments (id, todo_id, content, created_at, updated_at) VALUES (@id, @todo_id, @content, @created_at, @updated_at)'
+    ).run(comment);
+    return comment;
+  }
+
+  updateComment(id: string, content: string): TodoComment | undefined {
+    const existing = this.db.prepare('SELECT * FROM todo_comments WHERE id = ?').get(id) as TodoComment | undefined;
+    if (!existing) return undefined;
+    const now = new Date().toISOString();
+    this.db.prepare('UPDATE todo_comments SET content = ?, updated_at = ? WHERE id = ?')
+      .run(content, now, id);
+    return { ...existing, content, updated_at: now };
+  }
+
+  deleteComment(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM todo_comments WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+
+  private migrateDescriptionsToComments() {
+    const todos = this.db.prepare(
+      "SELECT id, description, created_at FROM todos WHERE description != '' AND description IS NOT NULL"
+    ).all() as Pick<Todo, 'id' | 'description' | 'created_at'>[];
+
+    if (todos.length === 0) return;
+
+    const insert = this.db.prepare(
+      'INSERT INTO todo_comments (id, todo_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+    );
+    const clear = this.db.prepare("UPDATE todos SET description = '' WHERE id = ?");
+
+    const migrate = this.db.transaction(() => {
+      for (const t of todos) {
+        const existing = this.db.prepare('SELECT 1 FROM todo_comments WHERE todo_id = ?').get(t.id);
+        if (!existing) {
+          insert.run(uuidv4(), t.id, t.description, t.created_at, t.created_at);
+          clear.run(t.id);
+        }
+      }
+    });
+    migrate();
   }
 
   // === LINKS ===

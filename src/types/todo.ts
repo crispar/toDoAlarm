@@ -14,8 +14,23 @@ export interface Todo {
   sort_order: number;
 }
 
+export interface TodoComment {
+  id: string;
+  todo_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LinkAPI {
   open: (url: string) => Promise<void>;
+}
+
+export interface CommentAPI {
+  getAll: (todoId: string) => Promise<TodoComment[]>;
+  add: (todoId: string, content: string) => Promise<TodoComment>;
+  update: (id: string, content: string) => Promise<TodoComment>;
+  delete: (id: string) => Promise<boolean>;
 }
 
 export type TodoFilter = 'daily' | 'all' | 'today' | 'upcoming' | 'completed';
@@ -35,6 +50,7 @@ declare global {
     api: {
       todo: TodoAPI;
       link: LinkAPI;
+      comment: CommentAPI;
       window: {
         minimize: () => void;
         maximize: () => void;

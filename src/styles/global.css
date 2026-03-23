@@ -794,38 +794,229 @@ input, textarea, button {
   white-space: pre-line;
 }
 
-/* === Memo with clickable links === */
-.memo-hint {
+/* === Comments === */
+.comments-field {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-count {
   font-weight: 400;
   font-size: 11px;
-  color: var(--text-muted);
+  background: var(--accent);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
   text-transform: none;
   letter-spacing: 0;
 }
 
-.memo-rendered {
-  padding: 10px 12px;
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  margin-bottom: 8px;
+}
+
+.comment-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.comment-content {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.comment-menu-wrapper {
+  position: relative;
+}
+
+.comment-menu-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: all 0.15s;
+  letter-spacing: 1px;
+}
+
+.comment-item:hover .comment-menu-btn {
+  opacity: 1;
+}
+
+.comment-menu-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.comment-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.comment-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.comment-menu button:hover {
+  background: var(--bg-hover);
+}
+
+.comment-menu button.danger {
+  color: var(--danger);
+}
+
+.comment-menu button.danger:hover {
+  background: rgba(255, 71, 87, 0.1);
+}
+
+.comment-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-edit-input {
+  padding: 6px 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.comment-save-btn,
+.comment-cancel-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.comment-save-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.comment-save-btn:hover {
+  background: var(--accent-hover);
+}
+
+.comment-cancel-btn {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.comment-cancel-btn:hover {
+  color: var(--text-primary);
+}
+
+.comment-add {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.comment-add-input {
+  flex: 1;
+  padding: 8px 10px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  min-height: 100px;
-  line-height: 1.6;
-  font-size: 14px;
-  cursor: text;
-  white-space: pre-wrap;
-  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  resize: none;
+  font-family: inherit;
   transition: border-color 0.15s;
 }
 
-.memo-rendered:hover {
+.comment-add-input:focus {
   border-color: var(--accent);
 }
 
-.memo-placeholder {
+.comment-add-input::placeholder {
   color: var(--text-muted);
+  font-size: 12px;
 }
 
+.comment-add-btn {
+  padding: 8px 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s;
+  align-self: stretch;
+}
+
+.comment-add-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.comment-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Links within comments */
 .memo-link {
   color: var(--accent);
   cursor: pointer;

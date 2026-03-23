@@ -16,6 +16,14 @@ const api = {
     open: (url: string) => ipcRenderer.invoke('link:open', url),
   },
 
+  // Comment operations
+  comment: {
+    getAll: (todoId: string) => ipcRenderer.invoke('comment:getAll', todoId),
+    add: (todoId: string, content: string) => ipcRenderer.invoke('comment:add', todoId, content),
+    update: (id: string, content: string) => ipcRenderer.invoke('comment:update', id, content),
+    delete: (id: string) => ipcRenderer.invoke('comment:delete', id),
+  },
+
   // Window controls
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
