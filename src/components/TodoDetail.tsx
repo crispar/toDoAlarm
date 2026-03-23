@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Todo, TodoLink, PriorityLevel } from '../types/todo';
+import React, { useState, useEffect } from 'react';
+import { Todo, PriorityLevel } from '../types/todo';
 
 interface Props {
   todo: Todo;
@@ -14,25 +14,74 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** Parse memo text into segments: plain text, bare URLs, and [alias](url) links */
+function parseDescription(text: string): Array<{ type: 'text' | 'link'; value: string; url?: string }> {
+  // Match [alias](url) or bare URLs
+  const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s<>)\]]+)/g;
+  const segments: Array<{ type: 'text' | 'link'; value: string; url?: string }> = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    }
+    if (match[1] && match[2]) {
+      // [alias](url)
+      segments.push({ type: 'link', value: match[1], url: match[2] });
+    } else if (match[3]) {
+      // bare URL
+      segments.push({ type: 'link', value: match[3], url: match[3] });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+function RenderedMemo({ text, onClick }: { text: string; onClick: () => void }) {
+  const segments = parseDescription(text);
+
+  const handleLinkClick = (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
+    window.api.link.open(url);
+  };
+
+  return (
+    <div className="memo-rendered" onClick={onClick}>
+      {segments.length === 0 ? (
+        <span className="memo-placeholder">메모를 입력하세요... (클릭하여 편집)</span>
+      ) : (
+        segments.map((seg, i) =>
+          seg.type === 'link' ? (
+            <span
+              key={i}
+              className="memo-link"
+              onClick={(e) => handleLinkClick(e, seg.url!)}
+              title={seg.url}
+            >
+              {seg.value}
+            </span>
+          ) : (
+            <span key={i}>{seg.value}</span>
+          )
+        )
+      )}
+    </div>
+  );
+}
+
 export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description);
   const [deadline, setDeadline] = useState(todo.deadline ? toLocalInput(todo.deadline) : '');
   const [reminderTime, setReminderTime] = useState(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
   const [priority, setPriority] = useState<PriorityLevel>(todo.priority);
-
-  // Links state
-  const [links, setLinks] = useState<TodoLink[]>([]);
-  const [newUrl, setNewUrl] = useState('');
-  const [newAlias, setNewAlias] = useState('');
-  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
-  const [editUrl, setEditUrl] = useState('');
-  const [editAlias, setEditAlias] = useState('');
-
-  const loadLinks = useCallback(async () => {
-    const data = await window.api.link.getAll(todo.id);
-    setLinks(data);
-  }, [todo.id]);
+  const [editingMemo, setEditingMemo] = useState(false);
 
   useEffect(() => {
     setTitle(todo.title);
@@ -40,8 +89,8 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
     setDeadline(todo.deadline ? toLocalInput(todo.deadline) : '');
     setReminderTime(todo.reminder_time ? toLocalInput(todo.reminder_time) : '');
     setPriority(todo.priority);
-    loadLinks();
-  }, [todo, loadLinks]);
+    setEditingMemo(false);
+  }, [todo]);
 
   const saveTitle = () => {
     if (title.trim() && title !== todo.title) {
@@ -53,6 +102,7 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
     if (description !== todo.description) {
       onUpdate({ description });
     }
+    setEditingMemo(false);
   };
 
   const handleDeadlineChange = (val: string) => {
@@ -74,38 +124,6 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
     if (confirm('이 할 일을 삭제하시겠습니까?')) {
       onDelete();
     }
-  };
-
-  // Link handlers
-  const handleAddLink = async () => {
-    const url = newUrl.trim();
-    if (!url) return;
-    await window.api.link.add(todo.id, url, newAlias.trim());
-    setNewUrl('');
-    setNewAlias('');
-    loadLinks();
-  };
-
-  const handleDeleteLink = async (id: string) => {
-    await window.api.link.delete(id);
-    loadLinks();
-  };
-
-  const handleOpenLink = (url: string) => {
-    window.api.link.open(url);
-  };
-
-  const startEditLink = (link: TodoLink) => {
-    setEditingLinkId(link.id);
-    setEditUrl(link.url);
-    setEditAlias(link.alias);
-  };
-
-  const handleSaveEditLink = async () => {
-    if (!editingLinkId || !editUrl.trim()) return;
-    await window.api.link.update(editingLinkId, { url: editUrl.trim(), alias: editAlias.trim() });
-    setEditingLinkId(null);
-    loadLinks();
   };
 
   return (
@@ -180,71 +198,6 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
         </div>
 
         <div className="detail-field">
-          <label>연관 링크</label>
-          <div className="links-section">
-            {links.map((link) => (
-              <div key={link.id} className="link-item">
-                {editingLinkId === link.id ? (
-                  <div className="link-edit-form">
-                    <input
-                      type="text"
-                      value={editUrl}
-                      onChange={(e) => setEditUrl(e.target.value)}
-                      placeholder="URL"
-                      className="link-input"
-                    />
-                    <input
-                      type="text"
-                      value={editAlias}
-                      onChange={(e) => setEditAlias(e.target.value)}
-                      placeholder="표시 이름 (선택)"
-                      className="link-input"
-                    />
-                    <div className="link-edit-actions">
-                      <button className="link-save-btn" onClick={handleSaveEditLink}>저장</button>
-                      <button className="link-cancel-btn" onClick={() => setEditingLinkId(null)}>취소</button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <span
-                      className="link-text"
-                      onClick={() => handleOpenLink(link.url)}
-                      title={link.url}
-                    >
-                      {link.alias || link.url}
-                    </span>
-                    <div className="link-actions">
-                      <button className="link-edit-btn" onClick={() => startEditLink(link)} title="수정">✎</button>
-                      <button className="link-delete-btn" onClick={() => handleDeleteLink(link.id)} title="삭제">✕</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-            <div className="link-add-form">
-              <input
-                type="text"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                placeholder="https://..."
-                className="link-input"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
-              />
-              <input
-                type="text"
-                value={newAlias}
-                onChange={(e) => setNewAlias(e.target.value)}
-                placeholder="표시 이름 (선택)"
-                className="link-input link-alias-input"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
-              />
-              <button className="link-add-btn" onClick={handleAddLink} disabled={!newUrl.trim()}>추가</button>
-            </div>
-          </div>
-        </div>
-
-        <div className="detail-field">
           <label>데일리 루프</label>
           <button
             className={`daily-toggle ${todo.is_daily ? 'active' : ''}`}
@@ -255,15 +208,23 @@ export default function TodoDetail({ todo, onUpdate, onDelete, onClose }: Props)
         </div>
 
         <div className="detail-field">
-          <label>메모</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={saveDescription}
-            className="detail-textarea"
-            placeholder="메모를 입력하세요..."
-            rows={6}
-          />
+          <label>메모 <span className="memo-hint">[이름](URL) 형식으로 링크 추가</span></label>
+          {editingMemo ? (
+            <textarea
+              autoFocus
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={saveDescription}
+              className="detail-textarea"
+              placeholder={"메모를 입력하세요...\n\n링크 예시:\nhttps://google.com\n[구글](https://google.com)"}
+              rows={6}
+            />
+          ) : (
+            <RenderedMemo
+              text={description}
+              onClick={() => setEditingMemo(true)}
+            />
+          )}
         </div>
 
         <div className="detail-info">

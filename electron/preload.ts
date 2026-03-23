@@ -13,10 +13,6 @@ const api = {
 
   // Link operations
   link: {
-    getAll: (todoId: string) => ipcRenderer.invoke('link:getAll', todoId),
-    add: (todoId: string, url: string, alias: string) => ipcRenderer.invoke('link:add', todoId, url, alias),
-    update: (id: string, updates: { url?: string; alias?: string }) => ipcRenderer.invoke('link:update', id, updates),
-    delete: (id: string) => ipcRenderer.invoke('link:delete', id),
     open: (url: string) => ipcRenderer.invoke('link:open', url),
   },
 

@@ -14,19 +14,7 @@ export interface Todo {
   sort_order: number;
 }
 
-export interface TodoLink {
-  id: string;
-  todo_id: string;
-  url: string;
-  alias: string;
-  created_at: string;
-}
-
 export interface LinkAPI {
-  getAll: (todoId: string) => Promise<TodoLink[]>;
-  add: (todoId: string, url: string, alias: string) => Promise<TodoLink>;
-  update: (id: string, updates: { url?: string; alias?: string }) => Promise<TodoLink>;
-  delete: (id: string) => Promise<boolean>;
   open: (url: string) => Promise<void>;
 }
 
